@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estudo Bíblico</title>
+
+<!-- ══ FIREBASE SDK ══ -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+/* ══ VARIÁVEIS ══ */
+:root{
+  --bg:#f7f3ee;--surface:#fffdf9;--border:#d9cfc4;
+  --accent:#6b4c2a;--accent-l:#8b6340;--accent-soft:#f0e8dc;
+  --text:#2c1f0e;--muted:#6b5c47;--gold:#c9973b;
+  --green:#3a6b4c;--green-soft:#e8f3ed;
+  --red:#8b2a2a;--red-soft:#f3e8e8;
+  --shadow:0 2px 8px rgba(107,76,42,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Georgia',serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ══ TELA DE LOGIN ══ */
+#login-screen{
+  position:fixed;inset:0;background:linear-gradient(145deg,#3d2510 0%,#6b4c2a 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;
+  transition:opacity .4s;
+}
+#login-screen.hidden{opacity:0;pointer-events:none}
+.login-box{background:#fffdf9;border-radius:16px;padding:2.5rem 2rem;text-align:center;max-width:360px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.login-logo{font-size:3.5rem;margin-bottom:.5rem}
+.login-title{font-size:1.5rem;color:var(--accent);margin-bottom:.3rem}
+.login-sub{font-size:.85rem;color:var(--muted);font-family:sans-serif;margin-bottom:1.8rem;line-height:1.6}
+.btn-google{
+  display:flex;align-items:center;justify-content:center;gap:.7rem;
+  background:#fff;border:2px solid var(--border);border-radius:8px;
+  padding:.8rem 1.4rem;cursor:pointer;font-size:.95rem;font-family:inherit;
+  color:var(--text);transition:all .2s;width:100%;
+}
+.btn-google:hover{border-color:var(--accent);background:var(--accent-soft)}
+.btn-google img{width:20px;height:20px}
+.login-footer{margin-top:1.5rem;font-size:.75rem;color:var(--muted);font-family:sans-serif;line-height:1.6}
+
+/* ══ HEADER ══ */
+header{background:linear-gradient(135deg,var(--accent) 0%,#3d2510 100%);color:#fff;padding:1rem 1.3rem;display:flex;align-items:center;justify-content:space-between;gap:.8rem;box-shadow:0 2px 12px rgba(0,0,0,.2)}
+.header-left{display:flex;align-items:center;gap:.7rem}
+.logo{font-size:1.6rem}
+header h1{font-size:1.1rem;font-weight:normal;letter-spacing:.04em}
+header h1 span{display:block;font-size:.75rem;opacity:.7;font-style:italic;margin-top:1px}
+.user-info{display:flex;align-items:center;gap:.6rem;font-size:.82rem}
+.user-avatar{width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.4);object-fit:cover}
+.user-name{opacity:.85;font-family:sans-serif;max-width:120px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.btn-signout{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:.3rem .7rem;cursor:pointer;font-size:.75rem;font-family:sans-serif;transition:background .2s}
+.btn-signout:hover{background:rgba(255,255,255,.25)}
+
+/* ══ NAV ══ */
+nav{background:var(--surface);border-bottom:2px solid var(--border);display:flex;overflow-x:auto}
+nav button{background:none;border:none;padding:.75rem 1.2rem;cursor:pointer;font-size:.85rem;font-family:inherit;color:var(--muted);border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap}
+nav button:hover{color:var(--accent);background:var(--accent-soft)}
+nav button.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:bold}
+
+/* ══ LAYOUT ══ */
+main{max-width:1100px;margin:0 auto;padding:1.3rem 1rem}
+.page{display:none}.page.active{display:block}
+
+/* ══ PAINÉIS ══ */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.2rem;margin-bottom:1.2rem;box-shadow:var(--shadow)}
+.panel-title{font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);font-weight:bold;margin-bottom:.85rem;padding-bottom:.45rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.4rem}
+
+/* ══ LEITOR ══ */
+.reader-layout{display:grid;grid-template-columns:250px 1fr;gap:1rem;align-items:start}
+@media(max-width:680px){.reader-layout{grid-template-columns:1fr}}
+.book-sidebar{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;position:sticky;top:1rem}
+.side-head{background:var(--accent);color:#fff;padding:.65rem 1rem;font-size:.8rem;font-weight:bold;letter-spacing:.05em}
+.trans-bar{padding:.5rem .7rem;background:var(--accent-soft);border-bottom:1px solid var(--border);display:flex;gap:.35rem;flex-wrap:wrap}
+.trans-bar button{padding:.22rem .6rem;border-radius:20px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:.74rem;font-family:inherit;color:var(--muted);transition:all .2s}
+.trans-bar button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.testament-tabs{display:flex;border-bottom:1px solid var(--border)}
+.testament-tabs button{flex:1;padding:.45rem;background:none;border:none;cursor:pointer;font-size:.76rem;font-family:inherit;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s}
+.testament-tabs button.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:bold}
+.book-list{max-height:380px;overflow-y:auto}
+.book-item{display:flex;justify-content:space-between;align-items:center;padding:.45rem .85rem;cursor:pointer;font-size:.82rem;border-bottom:1px solid #f0ebe3;transition:background .15s}
+.book-item:hover{background:var(--accent-soft)}
+.book-item.active{background:var(--accent-soft);color:var(--accent);font-weight:bold}
+.book-item .ch-c{font-size:.7rem;color:var(--muted);font-family:sans-serif}
+.chapter-bar{display:flex;gap:.3rem;flex-wrap:wrap;padding:.5rem .6rem;border-bottom:1px solid var(--border);background:#faf6f0;max-height:180px;overflow-y:auto}
+.chapter-bar button{width:30px;height:30px;border-radius:5px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:.76rem;font-family:inherit;transition:all .2s;color:var(--muted)}
+.chapter-bar button:hover{background:var(--accent-soft);border-color:var(--accent)}
+.chapter-bar button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.chapter-bar button.studied{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+
+/* ══ PAINEL DO TEXTO ══ */
+.bible-reader-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.reader-header{background:var(--accent-soft);border-bottom:1px solid var(--border);padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.4rem}
+.reader-ref{font-weight:bold;color:var(--accent);font-size:.92rem}
+.reader-hint{font-size:.73rem;color:var(--muted);font-family:sans-serif}
+.reader-body{padding:1.1rem 1.3rem;max-height:68vh;overflow-y:auto}
+.reader-loading{text-align:center;padding:2.5rem;color:var(--muted);font-family:sans-serif;font-size:.88rem}
+.verse-line{display:flex;gap:.45rem;padding:.3rem .35rem;border-radius:6px;cursor:pointer;transition:background .15s;line-height:1.8;border:2px solid transparent;margin-bottom:.05rem}
+.verse-line:hover{background:#f5f0e8}
+.verse-line.selected{background:#fff3d6;border-color:var(--gold)}
+.verse-num{min-width:26px;font-size:.7rem;color:var(--gold);font-weight:bold;font-family:sans-serif;padding-top:.22rem;text-align:right;flex-shrink:0}
+.verse-text{font-size:.97rem;color:var(--text)}
+.selection-bar{position:sticky;bottom:0;background:#fff8ec;border-top:2px solid var(--gold);padding:.65rem .9rem;display:none;align-items:center;justify-content:space-between;gap:.7rem;flex-wrap:wrap}
+.selection-bar.visible{display:flex}
+.sel-info{font-size:.83rem;color:var(--accent);font-family:sans-serif}
+.sel-info strong{color:var(--gold)}
+
+/* ══ FORMULÁRIOS ══ */
+.row{display:flex;gap:.75rem;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:.22rem;flex:1;min-width:120px}
+label{font-size:.76rem;color:var(--muted);font-family:sans-serif}
+input[type=text],input[type=date],select,textarea{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.52rem .72rem;font-family:'Georgia',serif;font-size:.9rem;color:var(--text);transition:border .2s;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent-l);box-shadow:0 0 0 3px rgba(107,76,42,.08)}
+textarea{resize:vertical;line-height:1.75}
+.q-block{background:var(--accent-soft);border-left:4px solid var(--gold);border-radius:0 8px 8px 0;padding:.85rem 1rem;margin-bottom:.85rem}
+.q-block .q{font-size:.88rem;color:var(--accent);font-weight:bold;margin-bottom:.4rem}
+.q-block textarea{min-height:72px;background:var(--surface)}
+.self-eval{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.5rem}
+.self-eval button{padding:.32rem .8rem;border-radius:20px;border:2px solid var(--border);background:var(--bg);cursor:pointer;font-family:inherit;font-size:.78rem;transition:all .2s;color:var(--text)}
+.self-eval button:hover{border-color:var(--accent)}
+.self-eval button.selected{border-color:var(--accent);background:var(--accent);color:#fff}
+
+/* ══ SCHOLAR ══ */
+.scholar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.65rem;margin-bottom:.85rem}
+.scholar-card{background:var(--accent-soft);border:1px solid var(--border);border-radius:8px;padding:.8rem}
+.scholar-card .name{font-size:.8rem;font-weight:bold;color:var(--accent);font-family:sans-serif}
+.scholar-card .desc{font-size:.73rem;color:var(--muted);margin:.12rem 0 .42rem;font-family:sans-serif}
+.scholar-card a{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;font-size:.73rem;padding:.26rem .6rem;border-radius:4px;font-family:sans-serif;transition:background .2s}
+.scholar-card a:hover{background:var(--accent-l)}
+
+/* ══ BOTÕES ══ */
+.btn-row{display:flex;gap:.55rem;flex-wrap:wrap;margin-top:.85rem}
+.btn{padding:.55rem 1.2rem;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.86rem;transition:all .2s;display:flex;align-items:center;gap:.3rem}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent-l)}
+.btn-secondary{background:var(--accent-soft);color:var(--accent);border:1px solid var(--border)}.btn-secondary:hover{background:#ede3d5}
+.btn-gold{background:var(--gold);color:#fff}.btn-gold:hover{background:#b8872f}
+.btn-sm{padding:.32rem .75rem;font-size:.78rem}
+
+/* ══ HISTÓRICO ══ */
+.history-list{display:flex;flex-direction:column;gap:.55rem}
+.history-item{background:var(--accent-soft);border:1px solid var(--border);border-radius:8px;padding:.8rem .95rem;display:flex;align-items:center;gap:.75rem;cursor:pointer;transition:background .2s}
+.history-item:hover{background:#ede3d5}
+.history-item .ref{font-weight:bold;color:var(--accent);font-size:.9rem}
+.history-item .date{font-size:.76rem;color:var(--muted);font-family:sans-serif}
+.history-item .preview{font-size:.78rem;color:var(--muted);font-style:italic;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.del-btn{background:none;border:none;cursor:pointer;color:var(--red);font-size:.92rem;padding:.12rem .32rem;border-radius:4px}
+.del-btn:hover{background:var(--red-soft)}
+.badge{display:inline-block;background:var(--gold);color:#fff;border-radius:4px;padding:.12rem .5rem;font-size:.7rem;font-family:sans-serif;font-weight:bold}
+
+/* ══ PROGRESSO ══ */
+.prog-book{background:var(--accent-soft);border:1px solid var(--border);border-radius:8px;padding:.8rem;margin-bottom:.65rem}
+.prog-book h4{font-size:.86rem;color:var(--accent);margin-bottom:.35rem}
+.prog-bar-wrap{background:var(--border);border-radius:4px;height:7px;margin-top:.22rem}
+.prog-bar{background:var(--gold);height:7px;border-radius:4px;transition:width .4s}
+.prog-info{font-size:.74rem;color:var(--muted);font-family:sans-serif;margin-top:.22rem}
+
+/* ══ HOME ══ */
+.verse-of-day{background:linear-gradient(135deg,var(--accent-soft),#f0e4cd);border:1px solid var(--gold);border-radius:10px;padding:1rem 1.3rem;margin-bottom:1.2rem;text-align:center}
+.vod-label{font-size:.7rem;font-family:sans-serif;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.3rem}
+.vod-text{font-style:italic;font-size:.96rem;color:var(--text);line-height:1.75}
+.vod-ref{font-size:.82rem;color:var(--accent);margin-top:.38rem;font-weight:bold}
+
+/* ══ TOAST ══ */
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(140%);background:var(--accent);color:#fff;padding:.7rem 1.3rem;border-radius:8px;font-size:.86rem;font-family:sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.2);transition:transform .3s;z-index:9999}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ══ LOADING OVERLAY ══ */
+.saving-indicator{display:none;position:fixed;top:1rem;right:1rem;background:var(--accent);color:#fff;border-radius:8px;padding:.45rem .9rem;font-size:.8rem;font-family:sans-serif;z-index:999;box-shadow:var(--shadow)}
+.saving-indicator.show{display:block}
+
+/* ══ EMPTY / MISC ══ */
+.empty{text-align:center;padding:2.5rem;color:var(--muted)}
+.empty .ei{font-size:2.5rem;margin-bottom:.7rem}
+
+@media(max-width:600px){main{padding:.75rem}.row{flex-direction:column}.scholar-grid{grid-template-columns:1fr}}
+@media print{nav,header .logo,.btn-row,#login-screen{display:none}.panel{box-shadow:none;border:1px solid #ccc}}
+</style>
+</head>
+<body>
+
+<!-- ══ TELA DE SETUP FIREBASE (aparece quando as chaves não foram configuradas) ══ -->
+<div id="setup-screen" style="display:none;position:fixed;inset:0;background:linear-gradient(145deg,#1a0f05 0%,#3d2510 100%);z-index:99999;overflow-y:auto;padding:2rem 1rem">
+  <div style="max-width:680px;margin:0 auto;font-family:sans-serif;color:#f5efe6">
+    <div style="text-align:center;margin-bottom:2rem">
+      <div style="font-size:3rem">✝</div>
+      <h1 style="font-family:Georgia,serif;color:#c9973b;font-size:1.6rem;margin:.5rem 0">Configuração do Firebase</h1>
+      <p style="color:#c4a882;font-size:.9rem">Siga os passos abaixo para ativar o login e o armazenamento na nuvem.<br>Leva cerca de <strong style="color:#c9973b">15 minutos</strong> e é totalmente gratuito.</p>
+    </div>
+
+    <!-- PASSO 1 -->
+    <div style="background:rgba(255,255,255,.06);border:1px solid rgba(201,151,59,.3);border-radius:12px;padding:1.4rem;margin-bottom:1rem">
+      <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.9rem">
+        <span style="background:#c9973b;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:.85rem;flex-shrink:0">1</span>
+        <strong style="font-size:1rem;color:#f0e0c4">Criar o projeto no Firebase</strong>
+      </div>
+      <ol style="padding-left:1.2rem;line-height:2;color:#d4b896;font-size:.88rem">
+        <li>Acesse <a href="https://console.firebase.google.com" target="_blank" style="color:#c9973b">console.firebase.google.com</a></li>
+        <li>Clique em <strong style="color:#f0e0c4">"Criar um projeto"</strong></li>
+        <li>Dê um nome (ex: <code style="background:rgba(255,255,255,.1);padding:.1rem .4rem;border-radius:4px">estudo-biblico</code>) e clique em <strong style="color:#f0e0c4">Continuar</strong></li>
+        <li>Desative o Google Analytics → Clique em <strong style="color:#f0e0c4">Criar projeto</strong></li>
+        <li>Aguarde a criação → Clique em <strong style="color:#f0e0c4">Continuar</strong></li>
+      </ol>
+    </div>
+
+    <!-- PASSO 2 -->
+    <div style="background:rgba(255,255,255,.06);border:1px solid rgba(201,151,59,.3);border-radius:12px;padding:1.4rem;margin-bottom:1rem">
+      <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.9rem">
+        <span style="background:#c9973b;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:.85rem;flex-shrink:0">2</span>
+        <strong style="font-size:1rem;color:#f0e0c4">Ativar o Login com Google</strong>
+      </div>
+      <ol style="padding-left:1.2rem;line-height:2;color:#d4b896;font-size:.88rem">
+        <li>No menu lateral, clique em <strong style="color:#f0e0c4">Authentication</strong></li>
+        <li>Clique em <strong style="color:#f0e0c4">Começar</strong></li>
+        <li>Na aba <em>Sign-in method</em>, clique em <strong style="color:#f0e0c4">Google</strong></li>
+        <li>Ative o botão no canto superior → selecione seu e-mail → <strong style="color:#f0e0c4">Salvar</strong></li>
+      </ol>
+    </div>
+
+    <!-- PASSO 3 -->
+    <div style="background:rgba(255,255,255,.06);border:1px solid rgba(201,151,59,.3);border-radius:12px;padding:1.4rem;margin-bottom:1rem">
+      <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.9rem">
+        <span style="background:#c9973b;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:.85rem;flex-shrink:0">3</span>
+        <strong style="font-size:1rem;color:#f0e0c4">Criar o banco de dados (Firestore)</strong>
+      </div>
+      <ol style="padding-left:1.2rem;line-height:2;color:#d4b896;font-size:.88rem">
+        <li>No menu lateral, clique em <strong style="color:#f0e0c4">Firestore Database</strong></li>
+        <li>Clique em <strong style="color:#f0e0c4">Criar banco de dados</strong></li>
+        <li>Escolha <strong style="color:#f0e0c4">"Começar no modo de produção"</strong> → Avançar</li>
+        <li>Escolha a região <strong style="color:#f0e0c4">us-east1</strong> → Criar</li>
+        <li>Na aba <strong style="color:#f0e0c4">Regras</strong>, substitua tudo por:</li>
+      </ol>
+      <pre style="background:rgba(0,0,0,.35);border-radius:8px;padding:1rem;font-size:.78rem;color:#a8d5b5;margin-top:.7rem;overflow-x:auto;white-space:pre">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/studies/{studyId} {
+      allow read, write: if request.auth != null
+                         &amp;&amp; request.auth.uid == userId;
+    }
+  }
+}</pre>
+      <p style="color:#c4a882;font-size:.82rem;margin-top:.6rem">Clique em <strong style="color:#f0e0c4">Publicar</strong> para salvar as regras.</p>
+    </div>
+
+    <!-- PASSO 4 -->
+    <div style="background:rgba(255,255,255,.06);border:1px solid rgba(201,151,59,.3);border-radius:12px;padding:1.4rem;margin-bottom:1rem">
+      <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.9rem">
+        <span style="background:#c9973b;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:.85rem;flex-shrink:0">4</span>
+        <strong style="font-size:1rem;color:#f0e0c4">Copiar as chaves para este arquivo</strong>
+      </div>
+      <ol style="padding-left:1.2rem;line-height:2;color:#d4b896;font-size:.88rem">
+        <li>No Firebase, clique em <strong style="color:#f0e0c4">⚙️ Configurações do projeto</strong> (ícone de engrenagem)</li>
+        <li>Role até <em>"Seus apps"</em> → Clique no ícone <strong style="color:#f0e0c4">&lt;/&gt;</strong> (Web app)</li>
+        <li>Digite um apelido (ex: <code style="background:rgba(255,255,255,.1);padding:.1rem .4rem;border-radius:4px">estudo-web</code>) → <strong style="color:#f0e0c4">Registrar app</strong></li>
+        <li>Você verá o bloco <code style="background:rgba(255,255,255,.1);padding:.1rem .4rem;border-radius:4px">firebaseConfig</code> com seus valores</li>
+        <li>Abra <strong style="color:#f0e0c4">estudo-biblico-online.html</strong> no Bloco de Notas</li>
+        <li>Encontre a seção abaixo e substitua cada valor:</li>
+      </ol>
+      <pre style="background:rgba(0,0,0,.35);border-radius:8px;padding:1rem;font-size:.78rem;color:#a8c8d5;margin-top:.7rem;overflow-x:auto;white-space:pre">const firebaseConfig = {
+  apiKey:            "COLE_SEU_API_KEY_AQUI",
+  authDomain:        "COLE_SEU_AUTH_DOMAIN_AQUI",
+  projectId:         "COLE_SEU_PROJECT_ID_AQUI",
+  storageBucket:     "COLE_SEU_STORAGE_BUCKET_AQUI",
+  messagingSenderId: "COLE_SEU_MESSAGING_SENDER_ID_AQUI",
+  appId:             "COLE_SEU_APP_ID_AQUI"
+};</pre>
+      <p style="color:#c4a882;font-size:.82rem;margin-top:.6rem">Salve o arquivo (Ctrl+S) e reabra no navegador.</p>
+    </div>
+
+    <!-- PASSO 5 -->
+    <div style="background:rgba(255,255,255,.06);border:1px solid rgba(201,151,59,.3);border-radius:12px;padding:1.4rem;margin-bottom:1rem">
+      <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.9rem">
+        <span style="background:#c9973b;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:.85rem;flex-shrink:0">5</span>
+        <strong style="font-size:1rem;color:#f0e0c4">Publicar online (Netlify — gratuito)</strong>
+      </div>
+      <ol style="padding-left:1.2rem;line-height:2;color:#d4b896;font-size:.88rem">
+        <li>Acesse <a href="https://www.netlify.com" target="_blank" style="color:#c9973b">netlify.com</a> → <strong style="color:#f0e0c4">Sign up com Google</strong></li>
+        <li>Na tela inicial, arraste o arquivo <strong style="color:#f0e0c4">estudo-biblico-online.html</strong> para a área cinza</li>
+        <li>Aguarde o upload — o Netlify gera uma URL automática</li>
+        <li>Copie a URL (ex: <code style="background:rgba(255,255,255,.1);padding:.1rem .4rem;border-radius:4px">seu-app.netlify.app</code>)</li>
+        <li>No Firebase → <strong style="color:#f0e0c4">Authentication → Configurações → Domínios autorizados</strong></li>
+        <li>Clique em <strong style="color:#f0e0c4">Adicionar domínio</strong> e cole o domínio do Netlify (sem https://)</li>
+      </ol>
+    </div>
+
+    <div style="text-align:center;margin-top:2rem;padding-bottom:2rem">
+      <p style="color:#c4a882;font-size:.85rem;margin-bottom:1.2rem">Após configurar as chaves e salvar o arquivo, reabra-o no navegador.</p>
+      <button onclick="document.getElementById('setup-screen').style.display='none'" style="background:#c9973b;color:#fff;border:none;border-radius:8px;padding:.85rem 2rem;font-size:.95rem;cursor:pointer;font-family:Georgia,serif">Já configurei — Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TELA DE LOGIN ══ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">✝</div>
+    <div class="login-title">Estudo Bíblico</div>
+    <div class="login-sub">Seu diário de estudos da Palavra,<br>sincronizado em todos os seus dispositivos.</div>
+    <button class="btn-google" onclick="signInWithGoogle()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+      Entrar com Google
+    </button>
+    <div class="login-footer">
+      Seus estudos ficam salvos na nuvem<br>e acessíveis de qualquer dispositivo.
+    </div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<header>
+  <div class="header-left">
+    <div class="logo">✝</div>
+    <h1>Estudo Bíblico <span>Leitor integrado · NVI principal · Multi-tradução</span></h1>
+  </div>
+  <div class="user-info" id="user-info" style="display:none">
+    <img class="user-avatar" id="user-avatar" src="" alt="">
+    <span class="user-name" id="user-name"></span>
+    <button class="btn-signout" onclick="signOut()">Sair</button>
+  </div>
+</header>
+
+<nav>
+  <button class="active" onclick="showPage('home')">🏠 Início</button>
+  <button onclick="showPage('leitor')">📖 Leitor Bíblico</button>
+  <button onclick="showPage('novo')">✏️ Estudo</button>
+  <button onclick="showPage('historico')">📚 Histórico</button>
+  <button onclick="showPage('progresso')">📊 Progresso</button>
+</nav>
+
+<main>
+
+<!-- HOME -->
+<div id="page-home" class="page active">
+  <div class="verse-of-day">
+    <div class="vod-label">✦ Versículo de Referência ✦</div>
+    <div class="vod-text">"Toda a Escritura é inspirada por Deus e útil para o ensino, para a repreensão, para a correção e para a instrução na justiça."</div>
+    <div class="vod-ref">2 Timóteo 3:16 — NVI</div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">✦ Como usar</div>
+    <ol style="font-size:.88rem;line-height:2.1;color:var(--text);margin:0 0 0 1.1rem">
+      <li><strong>Leitor Bíblico</strong> — escolha tradução, livro e capítulo. O texto carrega na tela.</li>
+      <li><strong>Clique nos versículos</strong> que quer estudar (ficam dourados).</li>
+      <li>Toque em <strong>"✏️ Estudar Seleção"</strong> — o texto vai direto para o formulário.</li>
+      <li>Responda as <strong>perguntas hermenêuticas</strong> e compare com os <strong>estudiosos</strong>.</li>
+      <li><strong>Salve</strong> — sincronizado automaticamente na nuvem. Acesse de qualquer dispositivo.</li>
+    </ol>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="showPage('leitor')">📖 Abrir Leitor Bíblico</button>
+      <button class="btn btn-secondary" onclick="showPage('historico')">📚 Ver Histórico</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">📊 Resumo</div>
+    <div style="display:flex;gap:2rem;flex-wrap:wrap">
+      <div><div style="font-size:1.9rem;font-weight:bold;color:var(--accent)" id="stat-total">—</div><div style="font-size:.76rem;color:var(--muted);font-family:sans-serif">estudos salvos</div></div>
+      <div><div style="font-size:1.9rem;font-weight:bold;color:var(--gold)" id="stat-books">—</div><div style="font-size:.76rem;color:var(--muted);font-family:sans-serif">livros estudados</div></div>
+      <div><div style="font-size:1.15rem;font-weight:bold;color:var(--green)" id="stat-last">—</div><div style="font-size:.76rem;color:var(--muted);font-family:sans-serif">último estudo</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- LEITOR -->
+<div id="page-leitor" class="page">
+  <div class="reader-layout">
+    <div class="book-sidebar">
+      <div class="side-head">📚 Bíblia Sagrada</div>
+      <div class="trans-bar" id="trans-bar">
+        <button class="active" onclick="setTranslation('ARA',this)" title="Almeida Revista e Atualizada">ARA</button>
+        <button onclick="setTranslation('NTLH',this)" title="Nova Tradução na Linguagem de Hoje">NTLH</button>
+        <button onclick="setTranslation('NAA',this)" title="Nova Almeida Atualizada">NAA</button>
+        <button onclick="setTranslation('NVT',this)" title="Nova Versão Transformadora">NVT</button>
+        <button onclick="setTranslation('Almeida',this)" title="Almeida Clássica (João Ferreira de Almeida)">Almeida</button>
+      </div>
+      <div class="testament-tabs">
+        <button class="active" id="tab-at" onclick="showTestament('at')">Antigo Testamento</button>
+        <button id="tab-nt" onclick="showTestament('nt')">Novo Testamento</button>
+      </div>
+      <div class="book-list" id="list-at"></div>
+      <div class="book-list" id="list-nt" style="display:none"></div>
+      <div style="border-top:1px solid var(--border);padding:.35rem .45rem .25rem;background:#faf6f0">
+        <div style="font-size:.68rem;color:var(--muted);font-family:sans-serif;padding:.15rem .3rem .25rem;text-transform:uppercase;letter-spacing:.08em">Capítulos</div>
+        <div class="chapter-bar" id="chapter-bar">
+          <span style="font-size:.76rem;color:var(--muted);font-family:sans-serif;padding:.25rem">Selecione um livro</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="bible-reader-panel">
+        <div class="reader-header">
+          <span class="reader-ref" id="reader-ref">Selecione um livro e capítulo</span>
+          <span class="reader-hint">Clique nos versículos para selecionar</span>
+        </div>
+        <div class="reader-body" id="reader-body">
+          <div class="reader-loading">
+            <div style="font-size:2.2rem;margin-bottom:.7rem">✝</div>
+            <p>Escolha um livro e capítulo na lista ao lado.</p>
+          </div>
+        </div>
+        <div class="selection-bar" id="selection-bar">
+          <div class="sel-info">
+            <strong id="sel-count">0</strong> versículo(s) — <span id="sel-preview"></span>
+          </div>
+          <div style="display:flex;gap:.45rem;flex-wrap:wrap">
+            <button class="btn btn-sm btn-secondary" onclick="clearSelection()">✕ Limpar</button>
+            <button class="btn btn-sm btn-gold" onclick="studySelection()">✏️ Estudar Seleção</button>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:.55rem">
+        <button class="btn btn-secondary btn-sm" id="btn-prev" onclick="prevChapter()" disabled>← Anterior</button>
+        <button class="btn btn-secondary btn-sm" id="btn-next" onclick="nextChapter()" disabled>Próximo →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ESTUDO -->
+<div id="page-novo" class="page">
+  <div id="import-banner" style="display:none;background:var(--green-soft);border:1px solid var(--green);border-radius:8px;padding:.7rem .95rem;margin-bottom:1rem;font-size:.85rem;color:var(--green)">
+    ✅ Versículos importados do Leitor. Complete o estudo abaixo.
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">📍 Identificação da Passagem</div>
+    <div class="row">
+      <div class="field" style="flex:2;min-width:160px">
+        <label>Livro</label>
+        <select id="book">
+          <option value="">Selecione...</option>
+          <optgroup label="Antigo Testamento">
+            <option>Gênesis</option><option>Êxodo</option><option>Levítico</option><option>Números</option><option>Deuteronômio</option>
+            <option>Josué</option><option>Juízes</option><option>Rute</option><option>1 Samuel</option><option>2 Samuel</option>
+            <option>1 Reis</option><option>2 Reis</option><option>1 Crônicas</option><option>2 Crônicas</option><option>Esdras</option>
+            <option>Neemias</option><option>Ester</option><option>Jó</option><option>Salmos</option><option>Provérbios</option>
+            <option>Eclesiastes</option><option>Cântico dos Cânticos</option><option>Isaías</option><option>Jeremias</option>
+            <option>Lamentações</option><option>Ezequiel</option><option>Daniel</option><option>Oséias</option><option>Joel</option>
+            <option>Amós</option><option>Obadias</option><option>Jonas</option><option>Miquéias</option><option>Naum</option>
+            <option>Habacuque</option><option>Sofonias</option><option>Ageu</option><option>Zacarias</option><option>Malaquias</option>
+          </optgroup>
+          <optgroup label="Novo Testamento">
+            <option>Mateus</option><option>Marcos</option><option>Lucas</option><option>João</option><option>Atos</option>
+            <option>Romanos</option><option>1 Coríntios</option><option>2 Coríntios</option><option>Gálatas</option><option>Efésios</option>
+            <option>Filipenses</option><option>Colossenses</option><option>1 Tessalonicenses</option><option>2 Tessalonicenses</option>
+            <option>1 Timóteo</option><option>2 Timóteo</option><option>Tito</option><option>Filemom</option><option>Hebreus</option>
+            <option>Tiago</option><option>1 Pedro</option><option>2 Pedro</option><option>1 João</option><option>2 João</option>
+            <option>3 João</option><option>Judas</option><option>Apocalipse</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="field" style="flex:.7;min-width:65px"><label>Capítulo</label><input type="text" id="chapter" placeholder="3"></div>
+      <div class="field" style="min-width:85px"><label>Versículos</label><input type="text" id="verses" placeholder="1-16"></div>
+      <div class="field" style="min-width:110px">
+        <label>Tradução</label>
+        <select id="translation">
+          <option value="ARA" selected>ARA — Almeida Revista e Atualizada</option>
+          <option value="NTLH">NTLH — Linguagem de Hoje</option>
+          <option value="NAA">NAA — Nova Almeida Atualizada</option>
+          <option value="NVT">NVT — Nova Versão Transformadora</option>
+          <option value="Almeida">Almeida Clássica</option>
+          <option value="NVI">NVI (texto manual)</option>
+          <option value="Outra">Outra</option>
+        </select>
+      </div>
+      <div class="field" style="min-width:115px"><label>Data</label><input type="date" id="study-date"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">📜 Texto Bíblico</div>
+    <textarea id="verse-text" style="min-height:120px" placeholder="O texto dos versículos selecionados aparece aqui automaticamente ao usar o Leitor. Ou cole/escreva manualmente."></textarea>
+    <div style="margin-top:.35rem;font-size:.75rem;color:var(--muted);font-family:sans-serif">
+      💡 <a href="https://www.bibliaonline.com.br/nvi" target="_blank" style="color:var(--accent)">NVI</a> ·
+      <a href="https://www.bibliaonline.com.br/ara" target="_blank" style="color:var(--accent)">ARA</a> ·
+      <a href="https://www.biblegateway.com" target="_blank" style="color:var(--accent)">BibleGateway</a>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">✏️ Percepções Iniciais</div>
+    <textarea id="initial-thoughts" style="min-height:120px" placeholder="Antes de qualquer pesquisa: o que este texto diz para você no primeiro impacto?"></textarea>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">🗺️ Contexto Histórico e Literário</div>
+    <textarea id="context-notes" style="min-height:120px" placeholder="Quem escreveu? Quando? Para quem? O que aconteceu antes e depois desta passagem?"></textarea>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">❓ Perguntas Hermenêuticas</div>
+    <p style="font-size:.8rem;color:var(--muted);font-family:sans-serif;margin-bottom:.95rem">Responda cada pergunta com base no texto para verificar sua compreensão:</p>
+
+    <div class="q-block"><div class="q">1. O que o texto diz literalmente? (Observação pura, sem interpretação)</div>
+    <textarea class="q-ans" data-q="1" placeholder="Descreva o que acontece no texto..."></textarea></div>
+
+    <div class="q-block"><div class="q">2. Quais são as palavras ou frases-chave? Por que elas importam?</div>
+    <textarea class="q-ans" data-q="2" placeholder="Identifique os termos centrais..."></textarea></div>
+
+    <div class="q-block"><div class="q">3. Qual é a mensagem principal (big idea) desta passagem?</div>
+    <textarea class="q-ans" data-q="3" placeholder="Em uma frase: o que o autor quer comunicar?"></textarea></div>
+
+    <div class="q-block"><div class="q">4. O que este texto revela sobre Deus / Jesus / o Espírito Santo?</div>
+    <textarea class="q-ans" data-q="4" placeholder="Que atributo, ação ou promessa está presente aqui?"></textarea></div>
+
+    <div class="q-block"><div class="q">5. Como este texto se conecta ao restante da Bíblia? (Harmonia Bíblica)</div>
+    <textarea class="q-ans" data-q="5" placeholder="Outros versículos confirmam ou explicam esta passagem?"></textarea></div>
+
+    <div class="q-block"><div class="q">6. Havia algum erro na minha compreensão inicial? O que mudou?</div>
+    <textarea class="q-ans" data-q="6" placeholder="O que o estudo mais profundo revelou?"></textarea></div>
+
+    <div style="background:var(--green-soft);border:1px solid var(--green);border-radius:8px;padding:.85rem;margin-top:.4rem">
+      <div style="font-size:.83rem;font-weight:bold;color:var(--green);margin-bottom:.38rem">📝 Autoavaliação</div>
+      <p style="font-size:.78rem;color:var(--text);margin-bottom:.55rem;font-family:sans-serif">Como você avalia sua compreensão desta passagem?</p>
+      <div class="self-eval">
+        <button onclick="setSelfEval(this,'Preciso Rever')">🔴 Preciso Rever</button>
+        <button onclick="setSelfEval(this,'Compreensão Parcial')">🟡 Compreensão Parcial</button>
+        <button onclick="setSelfEval(this,'Boa Compreensão')">🟢 Boa Compreensão</button>
+        <button onclick="setSelfEval(this,'Estudo Aprofundado')">✨ Estudo Aprofundado</button>
+      </div>
+      <input type="hidden" id="self-eval-value">
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">🎓 Comparação com Estudiosos</div>
+    <p style="font-size:.8rem;color:var(--muted);font-family:sans-serif;margin-bottom:.85rem">Após sua análise, consulte o que comentaristas dizem sobre esta passagem:</p>
+    <div class="scholar-grid">
+      <div class="scholar-card"><div class="name">Bible Gateway</div><div class="desc">Matthew Henry, Benson, Clarke e clássicos.</div><a href="#" onclick="openScholar('gateway');return false">🔗 Abrir</a></div>
+      <div class="scholar-card"><div class="name">Blue Letter Bible</div><div class="desc">Spurgeon, Wiersbe, David Guzik.</div><a href="#" onclick="openScholar('blb');return false">🔗 Abrir</a></div>
+      <div class="scholar-card"><div class="name">Bible Hub</div><div class="desc">Múltiplos comentários + análise léxica.</div><a href="#" onclick="openScholar('hub');return false">🔗 Abrir</a></div>
+      <div class="scholar-card"><div class="name">Bíblia Online (PT)</div><div class="desc">Notas em português, NVI.</div><a href="#" onclick="openScholar('ptbr');return false">🔗 Abrir</a></div>
+      <div class="scholar-card"><div class="name">Bibliatodo</div><div class="desc">Matthew Henry, Scofield (espanhol).</div><a href="#" onclick="openScholar('todo');return false">🔗 Abrir</a></div>
+      <div class="scholar-card"><div class="name">Logos Free</div><div class="desc">Análise lexical e comentários acadêmicos.</div><a href="https://app.logos.com" target="_blank">🔗 Abrir</a></div>
+    </div>
+    <label style="font-size:.78rem;color:var(--muted);font-family:sans-serif;display:block;margin-bottom:.35rem">Principais insights dos comentários:</label>
+    <textarea id="scholar-notes" style="min-height:130px" placeholder="📖 Matthew Henry: ...&#10;&#10;📖 David Guzik: ...&#10;&#10;📖 Spurgeon: ..."></textarea>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">🌱 Aplicação Prática e Oração</div>
+    <div style="display:grid;gap:.85rem">
+      <div><label style="font-size:.78rem;color:var(--muted);font-family:sans-serif;display:block;margin-bottom:.32rem">Como este texto se aplica à minha vida hoje?</label>
+      <textarea id="application" style="min-height:100px" placeholder="O que preciso mudar, crer ou fazer?"></textarea></div>
+      <div><label style="font-size:.78rem;color:var(--muted);font-family:sans-serif;display:block;margin-bottom:.32rem">Oração em resposta ao texto:</label>
+      <textarea id="prayer" style="min-height:80px" placeholder="Senhor, a partir desta passagem quero orar..."></textarea></div>
+      <div><label style="font-size:.78rem;color:var(--muted);font-family:sans-serif;display:block;margin-bottom:.32rem">Versículo para memorizar:</label>
+      <input type="text" id="memory-verse" placeholder="Ex: João 3:16 — Porque Deus amou o mundo..."></div>
+    </div>
+  </div>
+
+  <div class="panel" style="background:var(--accent-soft)">
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveStudy()">💾 Salvar na Nuvem</button>
+      <button class="btn btn-secondary" onclick="printStudy()">🖨️ Imprimir</button>
+      <button class="btn btn-secondary" onclick="clearForm()">🗑️ Limpar</button>
+    </div>
+  </div>
+</div>
+
+<!-- HISTÓRICO -->
+<div id="page-historico" class="page">
+  <div class="panel">
+    <div class="panel-title">📚 Histórico de Estudos</div>
+    <div id="history-container"><div class="empty"><div class="ei">📖</div><p>Nenhum estudo salvo ainda.</p></div></div>
+  </div>
+</div>
+
+<!-- PROGRESSO -->
+<div id="page-progresso" class="page">
+  <div class="panel">
+    <div class="panel-title">📊 Progresso por Livro</div>
+    <div id="progress-container"><div class="empty"><div class="ei">📊</div><p>Complete estudos para ver seu progresso.</p></div></div>
+  </div>
+</div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+<div class="saving-indicator" id="saving-indicator">☁️ Salvando...</div>
+
+<!-- ══════════════════════════════════════════════════════
+     FIREBASE CONFIG — SUBSTITUA OS VALORES ABAIXO
+     Acesse: console.firebase.google.com → Seu projeto
+     → Configurações do projeto → Seus apps → SDK
+════════════════════════════════════════════════════════ -->
+<script>
+const firebaseConfig = {
+  apiKey:            "AIzaSyBnAkyimBwT3AfDq0TeAaTdIN9X_A3HMrQ",
+  authDomain:        "estudo-b-c281b.firebaseapp.com",
+  projectId:         "estudo-b-c281b",
+  storageBucket:     "estudo-b-c281b.firebasestorage.app",
+  messagingSenderId: "684307270170",
+  appId:             "1:684307270170:web:5dc100d5da6df44de61fa3"
+};
+
+// ══ VERIFICAR SE O FIREBASE FOI CONFIGURADO ══
+(function() {
+  var notConfigured = Object.values(firebaseConfig).some(function(v) {
+    return !v || v.indexOf('COLE_SEU') !== -1 || v.indexOf('AQUI') !== -1;
+  });
+  if (notConfigured) {
+    document.getElementById('setup-screen').style.display = 'block';
+    // Impede a execução do restante do script enquanto não estiver configurado
+    throw new Error('Firebase não configurado — veja as instruções na tela.');
+  }
+})();
+
+// ══ INIT FIREBASE ══
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// Habilitar persistência offline (funciona mesmo sem internet)
+db.enablePersistence().catch(function(err) {
+  if (err.code !== 'failed-precondition' && err.code !== 'unimplemented') {
+    console.warn('Persistência offline não disponível:', err);
+  }
+});
+
+// ══ ESTADO GLOBAL ══
+let currentUser = null;
+let studiesCache = [];
+
+// ══ AUTH ══
+auth.onAuthStateChanged(function(user) {
+  if (user) {
+    currentUser = user;
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('user-info').style.display = 'flex';
+    document.getElementById('user-avatar').src = user.photoURL || '';
+    document.getElementById('user-name').textContent = user.displayName || user.email;
+    initApp();
+  } else {
+    currentUser = null;
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('user-info').style.display = 'none';
+  }
+});
+
+function signInWithGoogle() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(function(err) {
+    showToast('❌ Erro ao entrar: ' + err.message, 4000);
+  });
+}
+
+function signOut() {
+  if (!confirm('Deseja sair da sua conta?')) return;
+  auth.signOut();
+}
+
+// ══ INIT APP ══
+function initApp() {
+  document.getElementById('study-date').value = new Date().toISOString().split('T')[0];
+  buildBookLists();
+  loadStudiesFromCloud();
+}
+
+// ══ FIRESTORE — ESTUDOS ══
+function getUserStudiesRef() {
+  return db.collection('users').doc(currentUser.uid).collection('studies');
+}
+
+function loadStudiesFromCloud() {
+  if (!currentUser) return;
+  getUserStudiesRef()
+    .orderBy('createdAt', 'desc')
+    .onSnapshot(function(snapshot) {
+      studiesCache = snapshot.docs.map(function(doc) {
+        return Object.assign({ firestoreId: doc.id }, doc.data());
+      });
+      updateHomeStats();
+      buildBookLists();
+    }, function(err) {
+      console.error('Erro ao carregar estudos:', err);
+    });
+}
+
+function saveStudy() {
+  if (!currentUser) { showToast('⚠️ Faça login primeiro.', 3000); return; }
+  const book    = document.getElementById('book').value;
+  const chapter = document.getElementById('chapter').value;
+  if (!book || !chapter) { showToast('⚠️ Preencha livro e capítulo.', 3000); return; }
+
+  const qAnswers = {};
+  document.querySelectorAll('.q-ans').forEach(function(el) { qAnswers[el.dataset.q] = el.value; });
+
+  const study = {
+    book, chapter,
+    verses:          document.getElementById('verses').value,
+    date:            document.getElementById('study-date').value,
+    translation:     document.getElementById('translation').value,
+    reference:       book + ' ' + chapter + (document.getElementById('verses').value ? ':' + document.getElementById('verses').value : ''),
+    verseText:       document.getElementById('verse-text').value,
+    initialThoughts: document.getElementById('initial-thoughts').value,
+    contextNotes:    document.getElementById('context-notes').value,
+    qAnswers,
+    selfEval:        document.getElementById('self-eval-value').value,
+    scholarNotes:    document.getElementById('scholar-notes').value,
+    application:     document.getElementById('application').value,
+    prayer:          document.getElementById('prayer').value,
+    memoryVerse:     document.getElementById('memory-verse').value,
+    createdAt:       firebase.firestore.FieldValue.serverTimestamp(),
+  };
+
+  showSaving(true);
+  getUserStudiesRef().add(study)
+    .then(function() {
+      showSaving(false);
+      showToast('✅ Estudo salvo na nuvem!');
+      document.getElementById('import-banner').style.display = 'none';
+    })
+    .catch(function(err) {
+      showSaving(false);
+      showToast('❌ Erro ao salvar: ' + err.message, 4000);
+    });
+}
+
+function loadStudy(firestoreId) {
+  const s = studiesCache.find(function(x) { return x.firestoreId === firestoreId; });
+  if (!s) return;
+  const fields = {
+    book: s.book, chapter: s.chapter, verses: s.verses,
+    translation: s.translation || 'NVI', 'study-date': s.date,
+    'verse-text': s.verseText, 'initial-thoughts': s.initialThoughts,
+    'context-notes': s.contextNotes, 'scholar-notes': s.scholarNotes,
+    application: s.application, prayer: s.prayer,
+    'memory-verse': s.memoryVerse, 'self-eval-value': s.selfEval
+  };
+  Object.entries(fields).forEach(function(e) {
+    const el = document.getElementById(e[0]);
+    if (el) el.value = e[1] || '';
+  });
+  if (s.qAnswers) {
+    Object.entries(s.qAnswers).forEach(function(e) {
+      const el = document.querySelector('.q-ans[data-q="' + e[0] + '"]');
+      if (el) el.value = e[1];
+    });
+  }
+  document.querySelectorAll('.self-eval button').forEach(function(b) {
+    b.classList.toggle('selected', b.textContent.includes(s.selfEval));
+  });
+  document.getElementById('import-banner').style.display = 'none';
+  showPage('novo');
+  showToast('📖 Estudo carregado.');
+}
+
+function deleteStudy(ev, firestoreId) {
+  ev.stopPropagation();
+  if (!confirm('Excluir este estudo permanentemente?')) return;
+  showSaving(true);
+  getUserStudiesRef().doc(firestoreId).delete()
+    .then(function() { showSaving(false); showToast('Estudo excluído.'); })
+    .catch(function(err) { showSaving(false); showToast('❌ Erro: ' + err.message, 4000); });
+}
+
+// ══ HISTÓRICO ══
+function renderHistory() {
+  const c = document.getElementById('history-container');
+  if (!studiesCache.length) {
+    c.innerHTML = '<div class="empty"><div class="ei">📖</div><p>Nenhum estudo salvo ainda.</p></div>';
+    return;
+  }
+  c.innerHTML = '<div class="history-list">' + studiesCache.map(function(s) {
+    return '<div class="history-item" onclick="loadStudy(\'' + s.firestoreId + '\')">'
+      + '<div><div class="ref">' + s.reference + '</div><div class="date">' + fmtDate(s.date) + '</div></div>'
+      + '<div class="preview">' + (s.initialThoughts ? s.initialThoughts.slice(0, 65) + '...' : 'Sem notas') + '</div>'
+      + (s.selfEval ? '<span class="badge">' + s.selfEval + '</span>' : '')
+      + '<button class="del-btn" onclick="deleteStudy(event,\'' + s.firestoreId + '\')" title="Excluir">🗑️</button>'
+      + '</div>';
+  }).join('') + '</div>';
+}
+
+// ══ PROGRESSO ══
+function renderProgress() {
+  const map = {};
+  studiesCache.forEach(function(s) {
+    if (!map[s.book]) map[s.book] = new Set();
+    map[s.book].add(parseInt(s.chapter));
+  });
+  const c = document.getElementById('progress-container');
+  if (!Object.keys(map).length) {
+    c.innerHTML = '<div class="empty"><div class="ei">📊</div><p>Complete estudos para ver seu progresso.</p></div>';
+    return;
+  }
+  c.innerHTML = Object.entries(map).map(function(e) {
+    const bk = ALL_BOOKS.find(function(b) { return b.name === e[0]; });
+    const total = bk ? bk.ch : '?';
+    const done = e[1].size;
+    const pct = total !== '?' ? Math.round(done / total * 100) : 0;
+    return '<div class="prog-book"><h4>' + e[0] + '</h4>'
+      + '<div class="prog-bar-wrap"><div class="prog-bar" style="width:' + pct + '%"></div></div>'
+      + '<div class="prog-info">' + done + ' capítulo(s)' + (total !== '?' ? ' de ' + total + ' (' + pct + '%)' : '') + '</div></div>';
+  }).join('');
+}
+
+function updateHomeStats() {
+  document.getElementById('stat-total').textContent = studiesCache.length;
+  document.getElementById('stat-books').textContent = new Set(studiesCache.map(function(s) { return s.book; })).size;
+  const last = studiesCache[0];
+  document.getElementById('stat-last').textContent = last ? fmtDate(last.date) : '—';
+}
+
+// ══════════════════════════════════════════════
+// DADOS DOS LIVROS
+// ══════════════════════════════════════════════
+var AT = [
+  {id:1,name:'Gênesis',ch:50},{id:2,name:'Êxodo',ch:40},{id:3,name:'Levítico',ch:27},
+  {id:4,name:'Números',ch:36},{id:5,name:'Deuteronômio',ch:34},{id:6,name:'Josué',ch:24},
+  {id:7,name:'Juízes',ch:21},{id:8,name:'Rute',ch:4},{id:9,name:'1 Samuel',ch:31},
+  {id:10,name:'2 Samuel',ch:24},{id:11,name:'1 Reis',ch:22},{id:12,name:'2 Reis',ch:25},
+  {id:13,name:'1 Crônicas',ch:29},{id:14,name:'2 Crônicas',ch:36},{id:15,name:'Esdras',ch:10},
+  {id:16,name:'Neemias',ch:13},{id:17,name:'Ester',ch:10},{id:18,name:'Jó',ch:42},
+  {id:19,name:'Salmos',ch:150},{id:20,name:'Provérbios',ch:31},{id:21,name:'Eclesiastes',ch:12},
+  {id:22,name:'Cântico dos Cânticos',ch:8},{id:23,name:'Isaías',ch:66},{id:24,name:'Jeremias',ch:52},
+  {id:25,name:'Lamentações',ch:5},{id:26,name:'Ezequiel',ch:48},{id:27,name:'Daniel',ch:12},
+  {id:28,name:'Oséias',ch:14},{id:29,name:'Joel',ch:3},{id:30,name:'Amós',ch:9},
+  {id:31,name:'Obadias',ch:1},{id:32,name:'Jonas',ch:4},{id:33,name:'Miquéias',ch:7},
+  {id:34,name:'Naum',ch:3},{id:35,name:'Habacuque',ch:3},{id:36,name:'Sofonias',ch:3},
+  {id:37,name:'Ageu',ch:2},{id:38,name:'Zacarias',ch:14},{id:39,name:'Malaquias',ch:4}
+];
+var NT = [
+  {id:40,name:'Mateus',ch:28},{id:41,name:'Marcos',ch:16},{id:42,name:'Lucas',ch:24},
+  {id:43,name:'João',ch:21},{id:44,name:'Atos',ch:28},{id:45,name:'Romanos',ch:16},
+  {id:46,name:'1 Coríntios',ch:16},{id:47,name:'2 Coríntios',ch:13},{id:48,name:'Gálatas',ch:6},
+  {id:49,name:'Efésios',ch:6},{id:50,name:'Filipenses',ch:4},{id:51,name:'Colossenses',ch:4},
+  {id:52,name:'1 Tessalonicenses',ch:5},{id:53,name:'2 Tessalonicenses',ch:3},
+  {id:54,name:'1 Timóteo',ch:6},{id:55,name:'2 Timóteo',ch:4},{id:56,name:'Tito',ch:3},
+  {id:57,name:'Filemom',ch:1},{id:58,name:'Hebreus',ch:13},{id:59,name:'Tiago',ch:5},
+  {id:60,name:'1 Pedro',ch:5},{id:61,name:'2 Pedro',ch:3},{id:62,name:'1 João',ch:5},
+  {id:63,name:'2 João',ch:1},{id:64,name:'3 João',ch:1},{id:65,name:'Judas',ch:1},
+  {id:66,name:'Apocalipse',ch:22}
+];
+var ALL_BOOKS = AT.concat(NT);
+
+// ══ ESTADO DO LEITOR ══
+var state = {
+  translation: 'ARA', book: null, chapter: 1,
+  verses: [], selected: new Set(), testament: 'at'
+};
+
+// ══ LIVROS ══
+function buildBookLists() {
+  var listAT = document.getElementById('list-at');
+  var listNT = document.getElementById('list-nt');
+  if (listAT) listAT.innerHTML = AT.map(bookItem).join('');
+  if (listNT) listNT.innerHTML = NT.map(bookItem).join('');
+}
+function bookItem(b) {
+  var done = new Set(studiesCache.filter(function(s) { return s.book === b.name; }).map(function(s) { return parseInt(s.chapter); })).size;
+  var pct = done ? Math.round(done / b.ch * 100) : 0;
+  return '<div class="book-item" id="book-item-' + b.id + '" onclick="selectBook(' + b.id + ')">'
+    + '<span>' + b.name + '</span>'
+    + '<span class="ch-c">' + (pct > 0 ? pct + '% · ' : '') + b.ch + 'cap</span>'
+    + '</div>';
+}
+
+// ══ NAVEGAÇÃO ══
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById('page-' + id).classList.add('active');
+  var pages = ['home', 'leitor', 'novo', 'historico', 'progresso'];
+  document.querySelectorAll('nav button').forEach(function(b, i) {
+    b.classList.toggle('active', pages[i] === id);
+  });
+  if (id === 'historico') renderHistory();
+  if (id === 'progresso') renderProgress();
+}
+
+function showTestament(t) {
+  state.testament = t;
+  document.getElementById('list-at').style.display = t === 'at' ? '' : 'none';
+  document.getElementById('list-nt').style.display = t === 'nt' ? '' : 'none';
+  document.getElementById('tab-at').classList.toggle('active', t === 'at');
+  document.getElementById('tab-nt').classList.toggle('active', t === 'nt');
+}
+
+function setTranslation(t, btn) {
+  state.translation = t;
+  document.querySelectorAll('#trans-bar button').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  if (state.book && state.chapter) loadChapter();
+}
+
+// ══ SELECIONAR LIVRO / CAPÍTULO ══
+function selectBook(id) {
+  state.book = ALL_BOOKS.find(function(b) { return b.id === id; });
+  state.chapter = 1;
+  state.selected = new Set();
+  document.querySelectorAll('.book-item').forEach(function(el) { el.classList.remove('active'); });
+  var el = document.getElementById('book-item-' + id);
+  if (el) { el.classList.add('active'); el.scrollIntoView({ block: 'nearest' }); }
+  buildChapterBar();
+  loadChapter();
+}
+
+function buildChapterBar() {
+  var bar = document.getElementById('chapter-bar');
+  if (!state.book) { bar.innerHTML = '<span style="font-size:.76rem;color:var(--muted);font-family:sans-serif;padding:.25rem">Selecione um livro</span>'; return; }
+  var studied = getStudiedChapters(state.book.name);
+  var html = '';
+  for (var i = 1; i <= state.book.ch; i++) {
+    var cls = (studied.has(i) ? ' studied' : '') + (i === state.chapter ? ' active' : '');
+    html += '<button class="' + cls + '" data-ch="' + i + '" onclick="selectChapter(' + i + ')">' + i + '</button>';
+  }
+  bar.innerHTML = html;
+}
+
+function getStudiedChapters(bookName) {
+  var set = new Set();
+  studiesCache.filter(function(s) { return s.book === bookName; }).forEach(function(s) { set.add(parseInt(s.chapter)); });
+  return set;
+}
+
+function selectChapter(ch) {
+  state.chapter = ch;
+  state.selected = new Set();
+  document.querySelectorAll('#chapter-bar button').forEach(function(b) {
+    b.classList.toggle('active', parseInt(b.dataset.ch) === ch);
+  });
+  loadChapter();
+}
+
+function prevChapter() { if (state.chapter > 1) selectChapter(state.chapter - 1); }
+function nextChapter() { if (state.book && state.chapter < state.book.ch) selectChapter(state.chapter + 1); }
+
+// ══ MAPEAMENTO PARA bible-api.com (Almeida Clássica) ══
+var BAPI_NAMES = {
+  1:'genesis',2:'exodus',3:'leviticus',4:'numbers',5:'deuteronomy',
+  6:'joshua',7:'judges',8:'ruth',9:'1+samuel',10:'2+samuel',
+  11:'1+kings',12:'2+kings',13:'1+chronicles',14:'2+chronicles',15:'ezra',
+  16:'nehemiah',17:'esther',18:'job',19:'psalms',20:'proverbs',
+  21:'ecclesiastes',22:'song+of+solomon',23:'isaiah',24:'jeremiah',
+  25:'lamentations',26:'ezekiel',27:'daniel',28:'hosea',29:'joel',
+  30:'amos',31:'obadiah',32:'jonah',33:'micah',34:'nahum',
+  35:'habakkuk',36:'zephaniah',37:'haggai',38:'zechariah',39:'malachi',
+  40:'matthew',41:'mark',42:'luke',43:'john',44:'acts',
+  45:'romans',46:'1+corinthians',47:'2+corinthians',48:'galatians',
+  49:'ephesians',50:'philippians',51:'colossians',52:'1+thessalonians',
+  53:'2+thessalonians',54:'1+timothy',55:'2+timothy',56:'titus',
+  57:'philemon',58:'hebrews',59:'james',60:'1+peter',61:'2+peter',
+  62:'1+john',63:'2+john',64:'3+john',65:'jude',66:'revelation'
+};
+
+// ══ CARREGAR CAPÍTULO ══
+function loadChapter() {
+  if (!state.book) return;
+  var body = document.getElementById('reader-body');
+  var trans = state.translation;
+  document.getElementById('reader-ref').textContent = state.book.name + ' ' + state.chapter + ' — ' + trans;
+  body.innerHTML = '<div class="reader-loading">⏳ Carregando o texto em português...</div>';
+  updateNavButtons();
+  clearSelectionUI();
+
+  var url, isAlmeida = (trans === 'Almeida');
+
+  if (isAlmeida) {
+    var engName = BAPI_NAMES[state.book.id] || 'genesis';
+    url = 'https://bible-api.com/' + engName + '+' + state.chapter + '?translation=almeida';
+  } else {
+    url = 'https://bolls.life/get-chapter/' + trans + '/' + state.book.id + '/' + state.chapter + '/';
+  }
+
+  fetch(url)
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(data) {
+      var verses;
+      if (isAlmeida) {
+        if (!data.verses || !data.verses.length) throw new Error('vazio');
+        verses = data.verses.map(function(v) { return { verse: v.verse, text: v.text.trim() }; });
+      } else {
+        if (!Array.isArray(data) || !data.length) throw new Error('vazio');
+        verses = data;
+      }
+      state.verses = verses;
+      renderVerses(verses);
+    })
+    .catch(function() {
+      body.innerHTML = '<div class="reader-loading">'
+        + '<p style="color:var(--red)">⚠️ Não foi possível carregar o texto agora.</p>'
+        + '<p style="margin-top:.6rem;font-size:.82rem">Acesse o texto em: '
+        + '<a href="https://www.bibliaonline.com.br/ara" target="_blank" style="color:var(--accent)">bibliaonline.com.br</a></p>'
+        + '</div>';
+    });
+}
+
+function renderVerses(data) {
+  var html = '';
+  data.forEach(function(v) {
+    var sel = state.selected.has(v.verse) ? ' selected' : '';
+    var txt = v.text.replace(/<[^>]*>/g, '').trim();
+    html += '<div class="verse-line' + sel + '" data-v="' + v.verse + '" onclick="toggleVerse(' + v.verse + ')">'
+      + '<span class="verse-num">' + v.verse + '</span>'
+      + '<span class="verse-text">' + txt + '</span>'
+      + '</div>';
+  });
+  document.getElementById('reader-body').innerHTML = html;
+}
+
+function updateNavButtons() {
+  document.getElementById('btn-prev').disabled = !state.book || state.chapter <= 1;
+  document.getElementById('btn-next').disabled = !state.book || state.chapter >= (state.book ? state.book.ch : 1);
+}
+
+// ══ SELEÇÃO ══
+function toggleVerse(num) {
+  if (state.selected.has(num)) state.selected.delete(num);
+  else state.selected.add(num);
+  var el = document.querySelector('.verse-line[data-v="' + num + '"]');
+  if (el) el.classList.toggle('selected', state.selected.has(num));
+  updateSelectionBar();
+}
+
+function updateSelectionBar() {
+  var bar = document.getElementById('selection-bar');
+  var count = state.selected.size;
+  if (!count) { bar.classList.remove('visible'); return; }
+  bar.classList.add('visible');
+  document.getElementById('sel-count').textContent = count;
+  var sorted = Array.from(state.selected).sort(function(a, b) { return a - b; });
+  document.getElementById('sel-preview').textContent = sorted.length <= 5 ? 'v.' + sorted.join(', ') : 'v.' + sorted[0] + '–' + sorted[sorted.length - 1];
+}
+
+function clearSelection() {
+  state.selected = new Set();
+  document.querySelectorAll('.verse-line').forEach(function(el) { el.classList.remove('selected'); });
+  clearSelectionUI();
+}
+function clearSelectionUI() {
+  document.getElementById('selection-bar').classList.remove('visible');
+  document.getElementById('sel-count').textContent = '0';
+  document.getElementById('sel-preview').textContent = '';
+}
+
+// ══ ESTUDAR SELEÇÃO ══
+function studySelection() {
+  if (!state.book || !state.selected.size) return;
+  var sorted = Array.from(state.selected).sort(function(a, b) { return a - b; });
+  var range = sorted.length === 1 ? sorted[0] : sorted[0] + '-' + sorted[sorted.length - 1];
+  var text = sorted.map(function(num) {
+    var v = state.verses.find(function(vv) { return vv.verse === num; });
+    return v ? num + ' ' + v.text.replace(/<[^>]*>/g, '').trim() : '';
+  }).filter(Boolean).join('\n');
+
+  document.getElementById('book').value = state.book.name;
+  document.getElementById('chapter').value = state.chapter;
+  document.getElementById('verses').value = range;
+  document.getElementById('translation').value = state.translation;
+  document.getElementById('verse-text').value = text;
+  document.getElementById('study-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('import-banner').style.display = 'block';
+
+  ['initial-thoughts','context-notes','scholar-notes','application','prayer','memory-verse','self-eval-value']
+    .forEach(function(id) { document.getElementById(id).value = ''; });
+  document.querySelectorAll('.q-ans').forEach(function(el) { el.value = ''; });
+  document.querySelectorAll('.self-eval button').forEach(function(b) { b.classList.remove('selected'); });
+
+  showPage('novo');
+  window.scrollTo(0, 0);
+  showToast('✅ ' + state.book.name + ' ' + state.chapter + ':' + range + ' importado!');
+}
+
+// ══ SCHOLAR LINKS ══
+function openScholar(site) {
+  var book = document.getElementById('book').value || '';
+  var ch   = document.getElementById('chapter').value || '1';
+  var vs   = document.getElementById('verses').value || '';
+  var ref  = book + ' ' + ch + (vs ? ':' + vs.split('-')[0] : '');
+  var enc  = encodeURIComponent(ref);
+  var urls = {
+    gateway: 'https://www.biblegateway.com/passage/?search=' + enc + '&version=NVI-PT&tab=commentaries',
+    blb:     'https://www.blueletterbible.org/niv/' + book.toLowerCase().replace(/ /g, '') + '/' + ch + '/1/',
+    hub:     'https://biblehub.com/commentaries/' + book.toLowerCase().replace(/ /g, '_') + '/' + ch + '-1.htm',
+    ptbr:    'https://www.bibliaonline.com.br/nvi/' + book.toLowerCase().replace(/ /g, '_') + '/' + ch,
+    todo:    'https://www.bibliatodo.com/comentario-biblico/matthew-henry?v=' + enc,
+  };
+  window.open(urls[site] || '#', '_blank');
+}
+
+// ══ MISC ══
+function clearForm() {
+  if (!confirm('Limpar formulário?')) return;
+  ['book','chapter','verses','verse-text','initial-thoughts','context-notes',
+   'scholar-notes','application','prayer','memory-verse','self-eval-value'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.querySelectorAll('.q-ans').forEach(function(el) { el.value = ''; });
+  document.querySelectorAll('.self-eval button').forEach(function(b) { b.classList.remove('selected'); });
+  document.getElementById('study-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('translation').value = 'NVI';
+  document.getElementById('import-banner').style.display = 'none';
+  showToast('Formulário limpo.');
+}
+
+function setSelfEval(btn, v) {
+  document.querySelectorAll('.self-eval button').forEach(function(b) { b.classList.remove('selected'); });
+  btn.classList.add('selected');
+  document.getElementById('self-eval-value').value = v;
+}
+
+function printStudy() { window.print(); }
+
+function fmtDate(d) {
+  if (!d) return '—';
+  var p = d.split('-'); return p[2] + '/' + p[1] + '/' + p[0];
+}
+
+function showToast(msg, dur) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, dur || 2500);
+}
+
+function showSaving(on) {
+  document.getElementById('saving-indicator').classList.toggle('show', on);
+}
+</script>
+</body>
+</html>
